@@ -74,10 +74,12 @@ constraint sequence[1] = board[1,1] \/ sequence[1] = board[1,h];
 
 
 % ------------------------------- OUTPUT ------------------------------------- %
-solve maximize s; % <--- try different heuristics
+solve maximize s;
 
-output [ show(s) ++ "\n" ++ show(sequence) ] ++
-["\n"] ++ 
+output [ 
+  "Sequence length: " ++ show(s) ++ 
+  "\nSequence: " ++ show(sequence) ]
+++ ["\nBoard:\n"] ++ 
 [ 
   show(board[i,j]) ++
   if (j > 9) then "  " else " " endif ++
