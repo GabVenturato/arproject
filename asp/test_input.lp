@@ -1,10 +1,13 @@
-#const n = 3.
+#const n = 6.
 #const k = 2.
 #const h = 5.
 
 tile(1,1,1).
 tile(2,1,2).
 tile(3,2,2).
+tile(4,2,1).
+tile(5,2,2).
+tile(6,1,1).
 
 %*
 #const n = 20.
