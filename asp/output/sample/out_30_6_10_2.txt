@@ -1,0 +1,51 @@
+clingo version 5.3.0
+Reading from input/in_30_6_10_2.lp ...
+Solving...
+Answer: 1
+sequence(8)
+Optimization: -8
+Answer: 2
+sequence(9)
+Optimization: -9
+Answer: 3
+sequence(10)
+Optimization: -10
+Answer: 4
+sequence(14)
+Optimization: -14
+Answer: 5
+sequence(15)
+Optimization: -15
+Answer: 6
+sequence(16)
+Optimization: -16
+Answer: 7
+sequence(17)
+Optimization: -17
+Answer: 8
+sequence(18)
+Optimization: -18
+Answer: 9
+sequence(19)
+Optimization: -19
+Answer: 10
+sequence(20)
+Optimization: -20
+Answer: 11
+sequence(21)
+Optimization: -21
+Answer: 12
+sequence(22)
+Optimization: -22
+Answer: 13
+sequence(23)
+Optimization: -23
+SATISFIABLE
+
+TIME LIMIT   : 1
+Models       : 13+
+  Optimum    : unknown
+Optimization : -23
+Calls        : 1
+Time         : 300.000s (Solving: 294.62s 1st Model: 0.04s Unsat: 0.00s)
+CPU Time     : 297.795s
