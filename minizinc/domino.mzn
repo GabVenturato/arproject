@@ -12,7 +12,10 @@ int: k; % max value on tiles
 % tiles[t,1] is the left value of tile t (2 is the right one)
 array[1..n, 1..2] of 1..k: tiles;
 
-% board[x,y] = t means that the tile t is in position (x,y)
+% board[x,y] = p means that the tile t is in position p on the sequence,
+% and that it is placed on position (x,y) on board
+% (you can forget about this detail and think that a tile is placed on board,
+% and not it's corresponding position in the sequence)
 array[1..h, 1..h] of var 0..n: board;
 
 var 1..n: s; % length of the sequence
@@ -54,6 +57,7 @@ constraint forall( p in 1..s ) (
   sum( [ bool2int(board[i,j] == p) | i,j in 1..h ] ) <= 2
 );
 
+% defining where a tile can be placed on board
 constraint forall( i in 1..s-1 ) (
   exists( t1x,t1y,t2x,t2y in 1..h ) (
     board[t1x,t1y] = i /\ rightval(board[t1x,t1y],t1x,t1y) /\
@@ -74,7 +78,7 @@ constraint forall( p in 1..s ) (
 constraint board[1,1] = 1 /\ board[1,2] = 1;
 
 % try only sequences with length compatible with the board dimension
-constraint s < (h*h div 2);
+constraint s <= (h*h div 2);
 
 % sequence must be > h (imposed by assignment)
 % this could lead to unsatifiable situation if there are not enough tiles
@@ -98,7 +102,6 @@ solve :: seq_search([
     int_search(sequence, first_fail, indomain_min, complete),
     int_search([ board[i,j] | i,j in 1..h], first_fail, indomain_min, complete)])
   maximize s;
-%solve maximize s;
 
 output [ 
   "Sequence length: " ++ show(s) ++ 
