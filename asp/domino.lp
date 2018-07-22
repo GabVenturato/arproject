@@ -90,17 +90,14 @@ compatible(T1,T2) :- tile(T1,_,R), tile(T2,L,_), T1 != T2, R == L.
 
 %% Symmetry breaking
 % if a sequence is long l, then there exist a sequence of length l which starts
-% from top left corner, or from top right corner
-{ placed_on(T,X,1) : firsttile(T), topcorners(X) } > 0.
-
-% defining top corners
-topcorners(1;h).
+% from top left corners
+placed_on(T,1,1) :- firsttile(T).
+placed_on(T,2,1) :- firsttile(T).
 
 % firsttile is T if there are at least two tiles and T is the first
 % or if T is the only tile placed.
 firsttile(T) :- next(T,_), not next(_,T), placed(T1), T1 != T.
 firsttile(T) :- not next(_,_), placed(T).
-
 
 %% Sequence definition
 sequence(S+1) :- S = #count{ T: next(T,_) }.

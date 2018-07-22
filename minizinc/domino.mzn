@@ -1,8 +1,8 @@
 % Exercise 9 - (Custom) Domino
 % Gabriele Venturato (125512)
 % Automated Reasoning 2017/2018
+% tested with mzn-gecode v2.0.2 (i.e. fzn-gecode 5.1.0)
 
-include "alldifferent.mzn";
 % -------------------------------- DATA -------------------------------------- %
 % Input parameters
 int: h; % board dimension
@@ -41,48 +41,71 @@ constraint forall(t in 1..n) (
 
 % BOARD
 % a tile placed on the board must occupy at least two consequent cells
-constraint forall( i,j in 1..h, t in 1..n ) (
-  board[i,j] = t -> exists( a,b in {-1,0,1} where
+constraint forall( i,j in 1..h, p in 1..s ) (
+  board[i,j] = p -> exists( a,b in {-1,0,1} where
       i+a >= 1 /\ j+b >= 1 /\
       i+a <= h /\ j+b <= h /\
       abs(a) + abs(b) = 1
-    ) ( board[i+a,j+b] = t )
+    ) ( board[i+a,j+b] = p )
 );
 
 % for each row a tile can occupy at most two consequent cells
-constraint forall( t in 1..n ) (
-  sum( [ bool2int(board[i,j] == t) | i,j in 1..h ] ) <= 2
+constraint forall( p in 1..s ) (
+  sum( [ bool2int(board[i,j] == p) | i,j in 1..h ] ) <= 2
 );
 
 constraint forall( i in 1..s-1 ) (
   exists( t1x,t1y,t2x,t2y in 1..h ) (
-    board[t1x,t1y] = sequence[i] /\ rightval(board[t1x,t1y],t1x,t1y) /\
-    board[t2x,t2y] = sequence[i+1] /\ leftval(board[t2x,t2y],t2x,t2y) /\
+    board[t1x,t1y] = i /\ rightval(board[t1x,t1y],t1x,t1y) /\
+    board[t2x,t2y] = i+1 /\ leftval(board[t2x,t2y],t2x,t2y) /\
   abs(t1y - t2y) <= 1 /\ 
   abs(t1x - t2x) <= 1 /\ 
   abs(t1y - t2y) + abs(t1x - t2x) = 1)
 );
 
 % a tile can be on board iff it is in the sequence
-constraint forall( t in 1..n ) (
-  exists(x,y in 1..h) (board[x,y] = t) <-> exists(i in 1..s) (sequence[i] = t)
+constraint forall( p in 1..s ) (
+  exists(x,y in 1..h) (board[x,y] = p)
 );
 
 % SYMMERTRY BREAKING
-% first tile of the sequence can be on top left corner or top right
-constraint sequence[1] = board[1,1] \/ sequence[1] = board[1,h];
+% the longest sequence will start from top left corner with the tile
+% placed horizontally
+constraint board[1,1] = 1 /\ board[1,2] = 1;
 
+% try only sequences with length compatible with the board dimension
+constraint s < (h*h div 2);
+
+% sequence must be > h (imposed by assignment)
+% this could lead to unsatifiable situation if there are not enough tiles
+% compatilble to build a sequence length at least h
+constraint s > h;
+
+% don't consider permutation of tiles with the same values
+/* this can be activated with high "n" and low "k", otherwise it is not worth it
+constraint forall( i in 1..s-1, j in i+1..s ) (
+  ( tiles[ sequence[i], 1 ] ==  tiles[ sequence[j], 1 ] /\
+  tiles[ sequence[i], 2 ] ==  tiles[ sequence[j], 2 ] )
+  -> sequence[i] < sequence[j]
+);
+*/
+
+constraint forall( i,j in 1..h ) ( board[i,j] <= s );
 
 % ------------------------------- OUTPUT ------------------------------------- %
-solve maximize s;
+solve :: seq_search([
+    int_search([s], input_order, indomain_min, complete),
+    int_search(sequence, first_fail, indomain_min, complete),
+    int_search([ board[i,j] | i,j in 1..h], first_fail, indomain_min, complete)])
+  maximize s;
+%solve maximize s;
 
 output [ 
   "Sequence length: " ++ show(s) ++ 
   "\nSequence: " ++ show(sequence) ]
 ++ ["\nBoard:\n"] ++ 
 [ 
-  show(board[i,j]) ++
-  if (j > 9) then "  " else " " endif ++
+  show(board[i,j]) ++ "\t" ++
   if (j mod h == 0) then "\n" else "" endif
   | i,j in 1..h
 ];
@@ -90,13 +113,13 @@ output [
 
 % ----------------------------- PREDICATES ----------------------------------- %
 % true if position (x,y) is the right (resp. bottom) value of tile t
-predicate rightval(var int: t, 1..h: x, 1..h: y) =
+predicate rightval(var int: p, 1..h: x, 1..h: y) =
   exists(i,j in 1..h) (
-    board[i,j] == t /\ board[x,y] == t /\ ( x > i \/ y > j )
+    board[i,j] == p /\ board[x,y] == p /\ ( x > i \/ y > j )
   );
   
 % true if position (x,y) is the left (resp. top) value of tile t
-predicate leftval(var int: t, 1..h: x, 1..h: y) =
+predicate leftval(var int: p, 1..h: x, 1..h: y) =
   exists(i,j in 1..h) (
-    board[i,j] == t /\ board[x,y] == t /\ ( x < i \/ y < j )
+    board[i,j] == p /\ board[x,y] == p /\ ( x < i \/ y < j )
   );

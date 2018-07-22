@@ -1,4 +1,33 @@
-n = 6;
+n = 20;
+k = 2;
+h = 4;
+tiles = array2d(1..n, 1..2,
+[ 1,1
+, 1,2
+, 1,1
+, 2,2
+, 2,1
+, 2,1
+, 2,1
+, 1,1
+, 1,2
+, 1,2
+, 1,1
+, 2,1
+, 2,1
+, 1,1
+, 2,1
+, 1,2
+, 2,1
+, 2,1
+, 1,1
+, 2,1
+]);
+
+/*
+Questo input giustifica la presenza del vincolo che toglie permutazioni
+sulle sequenze, se lanciato su maxsequence
+n = 15;
 k = 2;
 
 tiles = array2d(1..n, 1..2,
@@ -8,6 +37,16 @@ tiles = array2d(1..n, 1..2,
 , 2,1
 , 2,2
 , 1,1
+, 1,2
+, 1,1
+, 2,1
+, 2,1
+, 1,1
+, 2,1
+, 2,2
+, 2,2
+, 1,2
 ]);
 
-h = 5;
+h = 8;
+*/

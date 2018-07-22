@@ -10,8 +10,8 @@ from random import randint
 TOTAL_INSTANCES = 100
 
 N = [20,30,40,50,60]
-K = [ int(x/5) for x in N ]
-H = [7,8,9,10,11]
+K = [ int(x/2) for x in N ]
+H = [6,7,8,9,10]
 
 # define and create (if not exists) the target folder
 target_folder = "instances/"
@@ -51,7 +51,17 @@ for (n,k) in zip(N,K):
 
             # minizinc
             fp_mz = open(mz_filename, "w")
-            # --- need to do ---
+            fp_mz.write("n = " + str(n) + ";\n")
+            fp_mz.write("k = " + str(k) + ";\n")
+            fp_mz.write("h = " + str(h) + ";\n")
+            fp_mz.write("tiles = array2d(1..n, 1..2,\n[")
+            for j,t in enumerate(T,1):
+                fp_mz.write(
+                    " " + str(t['l']) + "," + str(t['r'])
+                    )
+                if j < n:
+                    fp_mz.write("\n,")
+            fp_mz.write("\n]);")
             fp_mz.close()
 
 

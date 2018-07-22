@@ -1,6 +1,8 @@
+%*
+
 #const n = 6.
 #const k = 2.
-#const h = 5.
+#const h = 4.
 
 tile(1,1,1).
 tile(2,1,2).
@@ -8,8 +10,8 @@ tile(3,2,2).
 tile(4,2,1).
 tile(5,2,2).
 tile(6,1,1).
+*%
 
-%*
 #const n = 20.
 #const k = 4.
 #const h = 7.
@@ -34,4 +36,3 @@ tile(17,3,1).
 tile(18,1,4).
 tile(19,4,4).
 tile(20,2,3).
-*%
