@@ -1,0 +1,53 @@
+import os
+import re
+from operator import itemgetter
+
+output_dir = "output/"
+directory = os.fsencode(output_dir)
+
+times = []
+
+for file in os.listdir(directory):
+    filename = os.fsdecode(file)
+    if filename.endswith(".txt"):
+        f = os.path.join(output_dir, filename)
+
+        # extract parameters from filename
+        v = f.split('_')
+        n = v[1]
+        k = v[2]
+        h = v[3]
+        [i,_] = v[4].split(".")
+
+        # extract solving info from content
+        optimum_flag = "0"
+        optimum = 0
+        time = 0
+
+        fp = open(f,'r')
+
+        for line in fp:
+            if "OPTIMUM FOUND" in line:
+                optimum_flag = "1"
+
+            if "Optimization" in line:
+                # retreive optimum val
+                m = re.search('Optimization.*:.*-(.+)', line)
+                if m:
+                    optimum = m.group(1)
+                        
+            if "Solving" in line:
+                # retreive solving time
+                m = re.search('\(Solving: ([0-9]*\.[0-9]*)s', line)
+                if m:
+                    time = m.group(1)
+
+        fp.close()
+        times.append([n,k,int(h),int(i),str(time),optimum_flag,str(optimum)])
+
+times = sorted(times, key=itemgetter(0,1,2,3))
+
+for i,el in enumerate(times):
+    el = map(lambda x:str(x),el)
+    print( "\t".join(el) )
+        
