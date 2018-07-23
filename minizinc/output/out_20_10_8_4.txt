@@ -1,0 +1,23 @@
+Sequence length: 12
+Sequence: [17, 4, 7, 13, 11, 15, 20, 19, 6, 1, 14, 8, 0, 0, 0, 0, 0, 0, 0, 0]
+Board:
+1	1	0	0	0	0	0	0	
+0	2	0	0	0	0	0	0	
+0	2	0	0	0	0	0	0	
+0	3	0	0	0	0	0	0	
+0	3	0	0	0	0	0	0	
+0	4	0	0	0	10	10	11	
+5	4	7	7	9	9	12	11	
+5	6	6	8	8	0	12	0	
+----------
+==========
+%%  runtime:       3.077 (3077.446 ms)
+%%  solvetime:     2.908 (2908.934 ms)
+%%  solutions:     4
+%%  variables:     19280
+%%  propagators:   17343
+%%  propagations:  4610599
+%%  nodes:         11822
+%%  failures:      4856
+%%  restarts:      0
+%%  peak depth:    813

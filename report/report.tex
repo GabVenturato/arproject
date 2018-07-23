@@ -1,0 +1,215 @@
+%!TEX TS-program = pdflatex
+%!TEX encoding = UTF-8 Unicode
+\documentclass[12pt,a4paper,english,italian]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{babel}
+
+% Il pacchetto indentfirst abolisce la fastidiosa convenzione
+% anglosassone di fa cominciare la prima riga di un
+% capitolo o sezione a margine sinistro, senza rientro:
+\usepackage{indentfirst}
+
+\usepackage{graphicx}
+
+\usepackage{subfig}
+\usepackage[font={footnotesize, it}]{caption}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{color}
+
+\usepackage{booktabs}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={.}}
+
+\usepackage[ruled]{algorithm}       % contenitore per algoritmi (da lo stile)
+\usepackage[noend]{algpseudocode}   % per gestire gli algoritmi in pseudocosice
+
+% freely scalable fonts
+\usepackage{fix-cm}
+
+\newlength{\eightytt}
+\newcommand{\testthewidth}{%
+	\fontsize{\dimen0}{0}\selectfont
+	\sbox0{x\global\dimen1=0.6em}%
+	\ifdim 80\dimen1>\textwidth
+	\advance\dimen0 by -.1pt
+	\expandafter\testthewidth
+	\else
+	\global\eightytt\dimen0
+	\fi
+}
+
+\AtBeginDocument{%
+	\dimen0=\csname f@size\endcsname pt
+	\begingroup
+	\ttfamily
+	\testthewidth
+	\endgroup
+	\lstset{
+		basicstyle=\fontsize{\eightytt}{1.2\eightytt}\ttfamily
+	}%
+}
+
+% ------------------------- Impostazioni Pseudocodice ------------------------ %
+% traduci algorithm caption in italiano
+\makeatletter
+\renewcommand{\ALG@name}{Algoritmo}
+\makeatother
+
+% definisco foreach nel pseudocodice
+\algnewcommand\algorithmicforeach{\textbf{for each}}
+\algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
+
+\definecolor{rgbgreen}{RGB}{0,128,0}
+% ----------------------------- Stile dei Codici ----------------------------- %
+\definecolor{myblue}{RGB}{51,51,255}
+\definecolor{myred}{RGB}{255,15,15}
+\definecolor{mygreen}{RGB}{35,145,35}
+\definecolor{mybrown}{RGB}{129,3,3}
+
+\lstset{%
+	basicstyle=\footnotesize\ttfamily,
+	breaklines=true,
+	captionpos=b,
+	frame=single,
+	keepspaces=true,
+	numbers=left,
+	numbersep=5pt,
+	numberstyle=\tiny\ttfamily,
+	rulecolor=\color{black},
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	tabsize=2
+}
+
+% definition of Minizinc/Flatzinc language
+\lstdefinelanguage{minizinc}
+{ % list of keywords
+	keywords={
+		include,
+		constraint,
+		solve,
+		minimize,
+		maximize,
+		var,
+		par,
+		array,
+		of,
+		satisfy,
+		int,
+		float,
+		bool,
+		output,
+		in,
+		mod
+	},
+	keywords=[2]{
+		int_search,
+		forall,
+		if,
+		then,
+		else,
+		endif,
+		floor,
+		sqrt,
+		round,
+		abs
+	},
+	sensitive=true, % keywords are not case-sensitive
+	morecomment=[l]{\%}, % l is for line comment
+	morestring=[b]" % defines that strings are enclosed in double quotes
+}
+
+\lstdefinestyle{minizincstyle} {%
+	language=minizinc,
+	commentstyle=\color{myred},
+	keywordstyle=\color{mygreen},
+	keywordstyle=[2]\color{myblue},
+	rulecolor=\color{black},
+	stringstyle=\color{mybrown},
+}
+
+% definition of ASP/Clingo language
+\lstdefinelanguage{asp}
+{ % list of keywords
+	sensitive=true, % keywords are not case-sensitive
+	morecomment=[l]{\%}, % l is for line comment
+	morestring=[b]" % defines that strings are enclosed in double quotes
+}
+
+\lstdefinestyle{aspstyle} {%
+	language=asp,
+	commentstyle=\color{myred},
+	rulecolor=\color{black},
+	stringstyle=\color{mybrown},
+}
+
+\renewcommand{\lstlistingname}{Codice}
+
+%opening
+\title{Progetto del corso \\Automated Reasoning 2017/18\\Esercizio 9}
+\author{Gabriele Venturato (125512)}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\section{Materiale Prodotto}
+Nel materiale consegnato è possibile trovare uno script \texttt{create\_instances.py} per generare le istanze di input per i due modelli in ASP e MiniZinc --- le istanze sono le stesse per entrambi. Lo script è stato scritto in Python (versione 3.6) e genera le istanze nella cartella \texttt{instances/}. Ogni file di input generato ha il nome $in\_n\_k\_h\_i.ext$, dove $n$, $k$, e $h$ sono i parametri di input, e $i$ è un indice per distinguere le diverse istanze con gli stessi parametri di input. Le tessere del domino di ogni istanza sono generate casualmente quindi ogni istanza è (idealmente) diversa dalle altre.
+
+Sono presenti poi le cartelle \texttt{asp/} e \texttt{minizinc/}. All'interno di ognuna si trovano:
+\begin{itemize}
+	\item una cartella \texttt{input/} che contiene una copia delle istanze del rispettivo modello generate (sono in una cartella diversa da quella di generazione per evitare sovrascritture involontarie).
+	\item una cartella \texttt{output/} che contiene gli output dei test effettuati. Il nome dei file è analogo a quello degli input. E\' presente una sottocartella \emph{sample} che contiene una porzione di output (vedi punto successivo).
+	\item uno script bash \texttt{benchmark.sh} che può essere lanciato senza specificare niente, oppure con l'opzione \texttt{-s} che testa il modello sul $10$ delle istanze disponibili scelte in maniera pseudo-casuale e distribuita tra tutte le possibilità.
+	\item e infine i modelli del problema.
+\end{itemize}
+
+Inoltre, nella cartella di minizinc è possibile trovare un modello \emph{maxsequence.mzn} che è un'estrapolazione dal modello completo, che permette di trovare la sequenza più lunga possibile di tessere, non vincolate dalla scacchiera.
+
+\section{Il problema}
+Oltre a quanto descritto nel testo del problema, ho assunto che una tessera può essere ruotata in verticale solo di 90 gradi in senso orario. In questo modo il valore destro della tessera può essere o a destra o in alto.
+
+\subsection{Difficoltà}
+Ho dovuto modificare i parametri di input dopo aver testato diverse soluzioni. Ho lasciato le dimensioni di $n$ invariate, ho invece definito $k = n/2$ invece che $n/5$, e ho diminuito leggermente le dimensioni della scacchiera testando $h = 6,7,8,9,10$.
+
+Tale scelta non è casuale ma è frutto di un'analisi dei risultati prodotti dai modelli. Il modello ASP non ha presentato gravi problemi. Quello con cui ho avuto più difficoltà è stato il modello MiniZinc che non è stato performante fin da subito e mi ha fornito le indicazioni su come diminuire i parametri. Prima di tutto la dimensione della scacchiera è stata diminuita per abbassare il numero di possibilità in cui si possono disporre le tessere ovviamente. Per quanto riguarda $k$ invece ho voluto abbassarlo per diminuire il numero di diverse sequenze di tessere possibili. Questo mi ha permesso di ``allontanarmi'' dal valore $n!$ a cui tende se le tessere sono spesso ripetute, cioè se $k << n$.
+
+
+\section{Modelli}
+% symmetry breaking
+% controllo vincoli non ridondanti
+% numero contenuto di predicati e con coinvolgimento di variabili minimo
+% provato a parlare solo di board e non sequence ma niente
+
+\subsection{Modello ASP}
+% descrizione generale
+
+\lstinputlisting[
+style=aspstyle
+]{codes/domino.lp}
+
+\subsection{Modello MiniZinc}
+% definito board diversamente
+% problema!! (discorso seq lunghe che non sono max e terminano, casino)
+% euristiche di ricerca (s parte da indomain_min per assicurare un ottimo)
+% esiste vincolo non attivato per togliere permutazioni
+% cercato di usare vincoli globali senza successo
+% vincolo su dimensione minima porta rallentamenti in asp (e nota che ho messo s < h*h/2) ma tanto cazzo mene
+
+
+\lstinputlisting[
+style=minizincstyle
+]{codes/domino.mzn}
+
+\section{Risultati}
+Riporto in tabella i risultati dei benchmark. Non ho prodotto grafici perchè i risultati non si prestano ad una visualizzazione di questo tipo.
+
+Come anticipato, il modello ASP risulta più performante...
+
+\end{document}
