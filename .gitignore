@@ -3,3 +3,4 @@ minizinc/*.fzn
 report/*.aux
 report/*.log
 report/*.gz
+.vscode/
