@@ -1,2 +1,5 @@
 minizinc/*.ozn
 minizinc/*.fzn
+report/*.aux
+report/*.log
+report/*.gz
