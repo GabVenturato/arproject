@@ -155,18 +155,14 @@
 
 \maketitle
 
-\begin{abstract}
-
-\end{abstract}
-
 \section{Materiale Prodotto}
 Nel materiale consegnato è possibile trovare uno script \texttt{create\_instances.py} per generare le istanze di input per i due modelli in ASP e MiniZinc --- le istanze sono le stesse per entrambi. Lo script è stato scritto in Python (versione 3.6) e genera le istanze nella cartella \texttt{instances/}. Ogni file di input generato ha il nome $in\_n\_k\_h\_i.ext$, dove $n$, $k$, e $h$ sono i parametri di input, e $i$ è un indice per distinguere le diverse istanze con gli stessi parametri di input. Le tessere del domino di ogni istanza sono generate casualmente quindi ogni istanza è (idealmente) diversa dalle altre.
 
 Sono presenti poi le cartelle \texttt{asp/} e \texttt{minizinc/}. All'interno di ognuna si trovano:
 \begin{itemize}
 	\item una cartella \texttt{input/} che contiene una copia delle istanze del rispettivo modello generate (sono in una cartella diversa da quella di generazione per evitare sovrascritture involontarie).
-	\item una cartella \texttt{output/} che contiene gli output dei test effettuati. Il nome dei file è analogo a quello degli input. E\' presente una sottocartella \emph{sample} che contiene una porzione di output (vedi punto successivo).
-	\item uno script bash \texttt{benchmark.sh} che può essere lanciato senza specificare niente, oppure con l'opzione \texttt{-s} che testa il modello sul $10$ delle istanze disponibili scelte in maniera pseudo-casuale e distribuita tra tutte le possibilità.
+	\item una cartella \texttt{output/} che contiene gli output dei test effettuati. Il nome dei file è analogo a quello degli input. \'E presente una sottocartella \emph{sample} che contiene una porzione di output (vedi punto successivo).
+	\item uno script bash \texttt{benchmark.sh} che può essere lanciato senza specificare niente, oppure con l'opzione \texttt{-s} che testa il modello su $10$ delle istanze disponibili scelte in maniera pseudo-casuale e distribuita tra tutte le possibilità.
 	\item e infine i modelli del problema.
 \end{itemize}
 
@@ -178,38 +174,208 @@ Oltre a quanto descritto nel testo del problema, ho assunto che una tessera può
 \subsection{Difficoltà}
 Ho dovuto modificare i parametri di input dopo aver testato diverse soluzioni. Ho lasciato le dimensioni di $n$ invariate, ho invece definito $k = n/2$ invece che $n/5$, e ho diminuito leggermente le dimensioni della scacchiera testando $h = 6,7,8,9,10$.
 
-Tale scelta non è casuale ma è frutto di un'analisi dei risultati prodotti dai modelli. Il modello ASP non ha presentato gravi problemi. Quello con cui ho avuto più difficoltà è stato il modello MiniZinc che non è stato performante fin da subito e mi ha fornito le indicazioni su come diminuire i parametri. Prima di tutto la dimensione della scacchiera è stata diminuita per abbassare il numero di possibilità in cui si possono disporre le tessere ovviamente. Per quanto riguarda $k$ invece ho voluto abbassarlo per diminuire il numero di diverse sequenze di tessere possibili. Questo mi ha permesso di ``allontanarmi'' dal valore $n!$ a cui tende se le tessere sono spesso ripetute, cioè se $k << n$.
+Tale scelta è frutto di un'analisi dei risultati prodotti dai modelli. Il modello ASP non ha presentato gravi problemi. Quello con cui ho avuto più difficoltà è stato il modello MiniZinc che non è stato performante fin da subito e mi ha fornito le indicazioni su come diminuire i parametri. Prima di tutto la dimensione della scacchiera è stata diminuita per abbassare il numero di possibilità in cui si possono disporre le tessere ovviamente. Per quanto riguarda $k$ invece ho voluto abbassarlo per diminuire il numero di diverse sequenze di tessere possibili. Questo mi ha permesso di ``allontanarmi'' dal valore $n!$ a cui tende se le tessere sono spesso ripetute, cioè se $k << n$.
 
 
 \section{Modelli}
-% symmetry breaking
-% controllo vincoli non ridondanti
-% numero contenuto di predicati e con coinvolgimento di variabili minimo
-% provato a parlare solo di board e non sequence ma niente
+Per la produzione dei modelli sono partito da una versione iniziale che poi ho affinato man mano che verificavo le performance. Qui riporto le versioni finali che raccolgono tutti i miglioramenti considerati.
+
+Innanzitutto ho cercato di scrivere dei modelli tenendo conto alcuni aspetti:
+\begin{itemize}
+	\item ho limitato il numero di variabili il più possibile e in ogni caso ho cercato di restringere il dominio il più possibile con i mezzi forniti dai linguaggi (vincoli e domain predicate).
+	\item ho cercato di utilizzare il minor numero di vincoli possibili evitando di inserirne di ridondanti ma comunque cercando di vincolare il problema il più possibile in modo diretto e preciso.
+\end{itemize}
+
+Oltre a questo nello specifico ho provato due approcci per migliorare l'efficienza, uno ha funzionato e uno no.
+\begin{itemize}
+	\item Quello che non ha funzionato: nei modelli parlo di ``scacchiera'' e di ``sequenza'' (in MiniZinc in modo esplicito, in ASP attraverso i predicati \texttt{placed\_on} e \texttt{next}). Ho pensato di fare a meno di uno dei due in qualche modo, per ridurre il numero di variabili e predicati utilizzati, ma non sono riuscito a modellare il problema senza tenerli entrambi.
+	\item Quello che ha funzionato e mi ha dato lo speed-up maggiore rispetto a tutte le migliorie fatte, è stato notare che se esiste una sequenza di lunghezza $l$ posizionabile nella scacchiera, allora esiste una sequenza di lunghezza $l$ che inizia dall'angolo in alto a sinistra con la tessera posizionata in orizzontale. Questo ha eliminato molte situazioni simmetriche, e i vincoli relativi a questo si trovano in entrambi i modelli nelle sezioni ``symmetry breaking''.
+\end{itemize}
+
+Nelle due prossime sottosezioni ci sono i codici dei modelli ricchi di commenti per rendere più chiare le idee di ogni definizione e vincolo.
 
 \subsection{Modello ASP}
-% descrizione generale
+Oltre a quanto detto, e a quanto scritto nei commenti del codice, per il modello ASP non c'è molto altro da dire. L'idea che ho seguito è stata quella di definire una sequenza, con il predicato \texttt{next}, imponendo in aggiunta i vincoli di spazio imposti dalla presenza della scacchiera.
 
+In questo modello non è presente il vincolo inserito nel testo dell'esercizio relativo alla richiesta di avere una sequenza di lunghezza $l > h$ dove $h$ è il lato della scacchiera, solamente perchè ho notato rallentamenti inserendolo, e dato che è facile verificare, una volta fornito il risultato, se l'ottimo individuato è maggiore del lato della scacchiera, ho preferito non inserirlo.
+
+Una nota: nella scrittura del modello mi è venuto naturale utilizzare la X per le colonne, e la Y per le righe (pensando al piano cartesiano), anche se poi scrivendo il modello MiniZinc mi sono reso conto che forse era più intuitivo fare il contrario, ma comunque è un dettaglio che si può aggiustare facilmente in base alle preferenze, e non porta miglioramenti nell'efficienza.
+
+\bigskip
 \lstinputlisting[
 style=aspstyle
 ]{codes/domino.lp}
 
 \subsection{Modello MiniZinc}
-% definito board diversamente
-% problema!! (discorso seq lunghe che non sono max e terminano, casino)
-% euristiche di ricerca (s parte da indomain_min per assicurare un ottimo)
-% esiste vincolo non attivato per togliere permutazioni
-% cercato di usare vincoli globali senza successo
-% vincolo su dimensione minima porta rallentamenti in asp (e nota che ho messo s < h*h/2) ma tanto cazzo mene
+Prima di tutto: mi aspettavo di riuscire a produrre un modello più efficiente, invece nonostante le diverse analisi e i miglioramenti introdotti, c'è stato un problema che non sono riuscito a risolvere: ho notato che se ho una scacchiera in cui ci sta al massimo una sequenza di lunghezza $l$, però considerando i valori delle tessere riuscirei a formare una sequenza più lunga di $l$, il modello prima di dirmi che non ci sta nella scacchiera una sequenza di lunghezza $l+1$ (e quindi che $l$ è il, massimo), prova tutte le permutazioni di tessere per vedere se riesce a farle stare. Detto in altre parole, avrei voluto esprimere che: se viene individuata una sequenza di lunghezza $l+1$ che non ci sta nella scacchiera (quindi che non rispetta i vincoli di spazio), è inutile provare tutte le altre possibili sequenze di tessere, perchè tanto non ci staranno allo stesso modo della prima. Però purtroppo non sono riusicto a modellare un vincolo di questo tipo. Ho provato anche a valutare di cambiare completamente l'idea del modello, ma non sono riuscito a pensare a una modellazione alternativa. Se fosse possibile esprimere tale vincolo, senza dubbio il modello MiniZinc otterrebbe uno speed-up rilevante. Si può aggirare il problema ``giocando'' con il modello aggiuntivo che ho descritto all'inizio (``maxsequence''), andando a controllare se esiste una sequenza di una certa lunghezza, e se esiste, si può quindi modificare l'input per ottenere velocemente un risultato che attesta l'ottimo sulla lunghezza della sequenza.
+
+Sebbene non sia riuscito a risolvere il problema appena descritto, nel cercare di risolverlo ho trovato una rappresentazione di ``board'' leggermente più efficiente: inizialmente avevo definito ``board'' come mi è venuto più naturale, ovvero $board_{xy} = t$ significava che la tile $t$ si trovava in posizione $(x,y)$ nella scacchiera. Poi l'ho cambiato, scrivendo in posizione $(x,y)$ la posizione della tile in sequenza, invece che il suo ``nome'' (cioè un numero da $1$ a $n$). In questo modo riduco il domino di ogni cella di board a $1..s$ invece che $1..n$. Ovviamente al crescere della sequenza possibile, $s$ si avvicina ad $n$ e le prestazioni ritornano come nella rappresentazione iniziale di board.
+
+\bigskip
+Oltre al problema descritto ho cercato di migliorare l'efficienza in diversi modi. In primo luogo ho cercato di sfruttare i vincoli globali, come suggerito dal manuale di MiniZinc, vista la loro efficiente implementazione, però non sono riuscito ad inserirli nel mio modello. Ho poi inserito dei vincoli aggiuntivi nella sezione ``symmetry breaking'', oltre a quello descritto all'inizio della sezione 3:
+\begin{itemize}
+	\item Ho ridotto le dimensioni della sequenza massima vincolando dall'alto con $(h \times h) / 2$, dato che comunque più di questo numero di tessere non posso inserirlo. Poi ho ridotto dal basso con il vincolo imposto dal testo dell'esercizio ($l>h$). Come scritto nel commento al codice, questo porta a trovare alcuni modelli come insoddisfacibili, ma d'altro canto permette di escludere dei valori possibili, riducendo il numero di tentativi da fare, quindi ho deciso di tenerlo. Inoltre con i parametri per i benchmark sono rarissimi i casi di qeusto tipo.
+	\item Ho notato poi, con alcuni test, che potevo rimuovere delle simmetrie escludendo le permutazioni delle tessere con gli stessi valori. Il vincolo è però disattivato perchè porta vantaggi solo se $k << n$, cioè se sono presenti molte tessere ripetute, altrimenti causa rallentamenti inutili. C'è da dire inoltre che se $k << n$, nonostante si possa attivare quel vincolo, le possibili permutazioni iniziano a diventare un numero fattoriale rispetto a $k^2$ (possibili tessere), quindi comunque diventa difficile da risolvere. Non ho riportato questo vincolo nel modello ASP appunto per la sua inutilità in relazione ai test richiesti dall'esercizio.
+\end{itemize}
 
 
+Infine, come ultimo aspetto per migliorare l'efficienza ho considerato la possibilità di aggiungere annotazioni alle variabili di ricerca. Queste annotazioni si trovano nell'istruzione \texttt{solve} e sono quelle con cui ho ottenuto i migliori risultati. La scelta di tenere l'euristica \texttt{indomain\_min} sulla variabile $s$ che è quella massimizzata, è dovuta alla decisione di voler comunque arrivare ad avere un parametro di approssimazione dell'ottimo. Inizialmente l'avevo impostata \texttt{indomain\_max}, che lo rendeva efficiente per istanze in cui la sequenza massima è vicina ad $n$, però eccessivamente lento in casi in cui la sequenza massima è più corta.
+
+\bigskip
 \lstinputlisting[
 style=minizincstyle
 ]{codes/domino.mzn}
 
 \section{Risultati}
-Riporto in tabella i risultati dei benchmark. Non ho prodotto grafici perchè i risultati non si prestano ad una visualizzazione di questo tipo.
+Riporto in tabella i risultati dei benchmark. Non ho prodotto grafici perchè i risultati non si prestano ad una visualizzazione di questo tipo. Ogni tabella rappresenta una dimensione diversa di $n$ (e di conseguenza di $k$), che ho lasciato nelle prime due colonne per comodità di lettura. I parametri in input identificano univocamente anche il nome del file da cui sono stati prelevati.
+Oltre alle prime colonne che indicano i parametri già descritti nella sezione 1, per entrambi i modelli ci sono: il tempo di risoluzione, una colonna che indica se è stato individuato il fatto di aver raggiunto l'ottimo, e l'ottimo individuato alla fine dell'esecuzione. Nota che anche se il timeout di cinque minuti è scaduto, è possibile che l'ottimo sia stato comunque raggiunto, anche se non segnalato, perchè lo spazio di ricerca non è stato completamente esplorato.
 
-Come anticipato, il modello ASP risulta più performante...
+In generale, come ci si può aspettare, si nota che per parametri in input minori, si riesce a raggiungere l'ottimo più spesso e con tempi molto ridotti. Man mano che cresce $n$ invecce, risulta sempre più difficile individuare un ottimo, e comunque richiede tempi maggiori. Si può comunque notare che i tempi variano molto anche in base a come sono state generate le tessere del domino. Per cui, as esempio, per $n = 40$ si trovano casi in cui il timeout è scaduto, e casi in cui il tempo è di qualche secondo.
+
+Come anticipato, il modello ASP risulta notevolmente più performante. Le ragioni individuate sono già descritte nella sezione relativa al modello MiniZinc. 
+
+Da questi risultati si può notare che quando l'ottimo viene individuato esplicitamente, esso ovviamente coincide in entrambi i modelli. Quando non viene individuato invece, in generale, il modello ASP riesce ad individuare un ottimo maggiore (e quindi migliore) rispetto al modello MiniZinc.
+
+Può essere che si riescano a trovare ottimi migliori anche con il modello MiniZinc, cambiando le annotazioni di ricerca, però va valuto istanza per istanza, e per un test su tutte gli input generati ho preferito mantenere un comportamento uniforme, come descritto nell'apposita sezione.
+
+\begin{table}[]
+	\begin{tabular}{cccc|ccc|ccc|}
+		\cline{5-10}
+		&    &    &   & \multicolumn{3}{c|}{ASP} & \multicolumn{3}{c|}{MiniZinc} \\ \hline
+		n  & k  & h  & i & Time (s) & Opt & Opt val & Time (s)   & Opt   & Opt val  \\ \hline
+		20 & 10 & 6  & 1 & 0.08     & y   & 9       & 0.1        & y     & 9        \\ \hline
+		20 & 10 & 6  & 2 & 2.12     & y   & 14      & 23.1       & y     & 14       \\ \hline
+		20 & 10 & 6  & 3 & 0.63     & y   & 12      & 4.35       & y     & 12       \\ \hline
+		20 & 10 & 6  & 4 & 0.59     & y   & 12      & 3.78       & y     & 12       \\ \hline
+		20 & 10 & 7  & 1 & 1.02     & y   & 11      & 1.35       & y     & 11       \\ \hline
+		20 & 10 & 7  & 2 & 1.9      & y   & 11      & 1.72       & y     & 11       \\ \hline
+		20 & 10 & 7  & 3 & 9.52     & y   & 14      & 21.03      & y     & 14       \\ \hline
+		20 & 10 & 7  & 4 & 0.59     & y   & 12      & 4.95       & y     & 12       \\ \hline
+		20 & 10 & 8  & 1 & 0.09     & y   & 9       & 0.34       & y     & 9        \\ \hline
+		20 & 10 & 8  & 2 & 10.64    & y   & 15      & 62.18      & y     & 15       \\ \hline
+		20 & 10 & 8  & 3 & 15.95    & y   & 15      & 45.19      & y     & 15       \\ \hline
+		20 & 10 & 8  & 4 & 2.86     & y   & 12      & 2.91       & y     & 12       \\ \hline
+		20 & 10 & 9  & 1 & 8.86     & y   & 14      & 21.67      & y     & 14       \\ \hline
+		20 & 10 & 9  & 2 & 0.55     & y   & 12      & 2.4        & y     & 12       \\ \hline
+		20 & 10 & 9  & 3 & 1.41     & y   & 15      & 48.18      & y     & 15       \\ \hline
+		20 & 10 & 9  & 4 & 2.87     & y   & 13      & 7.21       & y     & 13       \\ \hline
+		20 & 10 & 10 & 1 & 0.39     & y   & 10      & 0.44       &       & 0        \\ \hline
+		20 & 10 & 10 & 2 & 5.62     & y   & 15      & 8.6        & y     & 15       \\ \hline
+		20 & 10 & 10 & 3 & 64.89    & y   & 13      & 8.79       & y     & 13       \\ \hline
+		20 & 10 & 10 & 4 & 1.34     & y   & 10      & 1.99       &       & 0        \\ \hline
+	\end{tabular}
+\end{table}
+
+\begin{table}[]
+	\begin{tabular}{cccc|ccc|ccc|}
+		\cline{5-10}
+		&    &    &   & \multicolumn{3}{c|}{ASP} & \multicolumn{3}{c|}{MiniZinc} \\ \hline
+		n  & k  & h  & i & Time (s) & Opt & Opt val & Time (s)   & Opt   & Opt val  \\ \hline
+		30 & 15 & 6  & 1 & 299.71   &     & 15      & 300        &       & 15       \\ \hline
+		30 & 15 & 6  & 2 & 299.7    &     & 15      & 300        &       & 15       \\ \hline
+		30 & 15 & 6  & 3 & 59.6     & y   & 15      & 300        &       & 15       \\ \hline
+		30 & 15 & 6  & 4 & 299.71   &     & 15      & 300        &       & 15       \\ \hline
+		30 & 15 & 7  & 1 & 4.08     & y   & 16      & 117.08     & y     & 16       \\ \hline
+		30 & 15 & 7  & 2 & 20.8     & y   & 16      & 111.19     & y     & 16       \\ \hline
+		30 & 15 & 7  & 3 & 4.76     & y   & 17      & 300        &       & 16       \\ \hline
+		30 & 15 & 7  & 4 & 10.48    & y   & 16      & 108.65     & y     & 16       \\ \hline
+		30 & 15 & 8  & 1 & 7.13     & y   & 15      & 54.89      & y     & 15       \\ \hline
+		30 & 15 & 8  & 2 & 5.68     & y   & 14      & 16.97      & y     & 14       \\ \hline
+		30 & 15 & 8  & 3 & 39.42    & y   & 17      & 300        &       & 16       \\ \hline
+		30 & 15 & 8  & 4 & 6.01     & y   & 18      & 300        &       & 16       \\ \hline
+		30 & 15 & 9  & 1 & 83.79    & y   & 20      & 300        &       & 17       \\ \hline
+		30 & 15 & 9  & 2 & 20.91    & y   & 16      & 174.34     & y     & 16       \\ \hline
+		30 & 15 & 9  & 3 & 67.65    & y   & 19      & 300        &       & 17       \\ \hline
+		30 & 15 & 9  & 4 & 14.96    & y   & 16      & 156.32     & y     & 16       \\ \hline
+		30 & 15 & 10 & 1 & 8.04     & y   & 17      & 257.48     & y     & 17       \\ \hline
+		30 & 15 & 10 & 2 & 130.02   & y   & 20      & 300.01     &       & 17       \\ \hline
+		30 & 15 & 10 & 3 & 71.86    & y   & 19      & 300.01     &       & 17       \\ \hline
+		30 & 15 & 10 & 4 & 8.31     & y   & 15      & 21.13      & y     & 15       \\ \hline
+	\end{tabular}
+\end{table}
+
+\begin{table}[]
+	\begin{tabular}{cccc|ccc|ccc|}
+		\cline{5-10}
+		&    &    &   & \multicolumn{3}{c|}{ASP} & \multicolumn{3}{c|}{MiniZinc} \\ \hline
+		n  & k  & h  & i & Time (s) & Opt & Opt val & Time (s)   & Opt   & Opt val  \\ \hline
+		40 & 20 & 6  & 1 & 299.69   &     & 15      & 300.01     &       & 15       \\ \hline
+		40 & 20 & 6  & 2 & 152.07   & y   & 15      & 300.01     &       & 15       \\ \hline
+		40 & 20 & 6  & 3 & 299.68   &     & 15      & 300.02     &       & 15       \\ \hline
+		40 & 20 & 6  & 4 & 54       & y   & 15      & 300.01     &       & 15       \\ \hline
+		40 & 20 & 7  & 1 & 108.18   & y   & 19      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 7  & 2 & 8.71     & y   & 15      & 56.4       & y     & 15       \\ \hline
+		40 & 20 & 7  & 3 & 15.91    & y   & 18      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 7  & 4 & 47.5     & y   & 18      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 8  & 1 & 227.08   & y   & 23      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 8  & 2 & 299.03   &     & 22      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 8  & 3 & 8.56     & y   & 12      & 2.3        & y     & 12       \\ \hline
+		40 & 20 & 8  & 4 & 51.39    & y   & 18      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 9  & 1 & 85.73    & y   & 23      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 9  & 2 & 205.46   & y   & 20      & 300.01     &       & 16       \\ \hline
+		40 & 20 & 9  & 3 & 54.89    & y   & 11      & 3.26       & y     & 11       \\ \hline
+		40 & 20 & 9  & 4 & 298.43   &     & 12      & 6.49       & y     & 12       \\ \hline
+		40 & 20 & 10 & 1 & 2.65     & y   & 14      & 6.26       & y     & 14       \\ \hline
+		40 & 20 & 10 & 2 & 296.95   &     & 25      & 300.01     &       & 17       \\ \hline
+		40 & 20 & 10 & 3 & 126.14   & y   & 19      & 300.01     &       & 17       \\ \hline
+		40 & 20 & 10 & 4 & 18.98    & y   & 17      & 238.49     & y     & 17       \\ \hline
+	\end{tabular}
+\end{table}
+
+\begin{table}[]
+	\begin{tabular}{cccc|ccc|ccc|}
+		\cline{5-10}
+		&    &    &   & \multicolumn{3}{c|}{ASP} & \multicolumn{3}{c|}{MiniZinc} \\ \hline
+		n  & k  & h  & i & Time (s) & Opt & Opt val & Time (s)   & Opt   & Opt val  \\ \hline
+		50 & 25 & 6  & 1 & 299.45   &     & 15      & 300.01     &       & 15       \\ \hline
+		50 & 25 & 6  & 2 & 299.57   &     & 15      & 300.01     &       & 15       \\ \hline
+		50 & 25 & 6  & 3 & 299.56   &     & 15      & 300.01     &       & 15       \\ \hline
+		50 & 25 & 6  & 4 & 299.48   &     & 15      & 300.01     &       & 15       \\ \hline
+		50 & 25 & 7  & 1 & 299.19   &     & 21      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 7  & 2 & 299.22   &     & 20      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 7  & 3 & 299.16   &     & 21      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 7  & 4 & 299.15   &     & 21      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 8  & 1 & 298.43   &     & 21      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 8  & 2 & 298.67   &     & 24      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 8  & 3 & 24.24    & y   & 17      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 8  & 4 & 298.69   &     & 21      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 9  & 1 & 297.83   &     & 23      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 9  & 2 & 297.68   &     & 24      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 9  & 3 & 92.58    & y   & 22      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 9  & 4 & 297.76   &     & 11      & 300.01     &       & 16       \\ \hline
+		50 & 25 & 10 & 1 & 28.06    & y   & 22      & 300.01     &       & 17       \\ \hline
+		50 & 25 & 10 & 2 & 296.22   &     & 23      & 300.01     &       & 17       \\ \hline
+		50 & 25 & 10 & 3 & 296.77   &     & 21      & 300.01     &       & 17       \\ \hline
+		50 & 25 & 10 & 4 & 296.55   &     & 23      & 300.01     &       & 17       \\ \hline
+	\end{tabular}
+\end{table}
+
+\begin{table}[]
+	\begin{tabular}{cccc|ccc|ccc|}
+		\cline{5-10}
+		&    &    &   & \multicolumn{3}{c|}{ASP} & \multicolumn{3}{c|}{MiniZinc} \\ \hline
+		n  & k  & h  & i & Time (s) & Opt & Opt val & Time (s)   & Opt   & Opt val  \\ \hline
+		60 & 30 & 6  & 1 & 299.54   &     & 15      & 300.01     &       & 15       \\ \hline
+		60 & 30 & 6  & 2 & 299.49   &     & 15      & 300.01     &       & 15       \\ \hline
+		60 & 30 & 6  & 3 & 299.52   &     & 15      & 300.01     &       & 15       \\ \hline
+		60 & 30 & 6  & 4 & 299.48   &     & 15      & 300.01     &       & 15       \\ \hline
+		60 & 30 & 7  & 1 & 47.34    & y   & 17      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 7  & 2 & 299.09   &     & 21      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 7  & 3 & 298.98   &     & 17      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 7  & 4 & 91.7     & y   & 20      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 8  & 1 & 298.66   &     & 25      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 8  & 2 & 298.28   &     & 23      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 8  & 3 & 298.15   &     & 22      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 8  & 4 & 298.3    &     & 21      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 9  & 1 & 297.53   &     & 23      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 9  & 2 & 297.52   &     & 26      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 9  & 3 & 297.03   &     & 20      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 9  & 4 & 297.48   &     & 19      & 300.01     &       & 16       \\ \hline
+		60 & 30 & 10 & 1 & 295.65   &     & 25      & 300.01     &       & 17       \\ \hline
+		60 & 30 & 10 & 2 & 295.88   &     & 19      & 300.01     &       & 17       \\ \hline
+		60 & 30 & 10 & 3 & 296.05   &     & 3       & 300.01     &       & 17       \\ \hline
+		60 & 30 & 10 & 4 & 295.8    &     & 24      & 300.01     &       & 17       \\ \hline
+	\end{tabular}
+\end{table}
 
 \end{document}
